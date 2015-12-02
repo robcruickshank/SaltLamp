@@ -79,7 +79,7 @@ void loop() {                                       //--------------------------
   //pixels.show();                                  // This sends the updated pixel color to the hardware.
      
      
- for (int i=0; i <= 7; i++){                      //For loop to check random number against magic number 
+ for (int i=0; i <= 7; i++){                      //Simple debugging to figure out why some values are waaaay out of range.
         
              Serial.print(" pixel ");
              Serial.print(i);
