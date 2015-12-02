@@ -41,7 +41,7 @@ int magicnumber;                                    // magic number determines w
 
 
 //--------------------------------------------------// The following values are for the "Shimmer" routine
-byte pixelvalue[7];                                  // array to store the address location of each pixel event, 8 in total
+int pixelvalue[7];                                  // array to store the address location of each pixel event, 8 in total
 int countval[7];                                    // array to store the counter for each pixel event, 8 in total
 int pixelgo[7];                                     // array to store the activation bit for each pixel event, 8 in total
 int pixmax = 512;                                   // int to store the max brightness for each pixel event
