@@ -1,12 +1,15 @@
-// Neopixel Salt Lamp v1.0
+
+// Neopixel Salt Lamp v1.1
 // By Chris Barrett - Polaris Interplanetary - Special Projects Division
 // Supports two modes; All pixel colour fade, and 8 pixel RGB mixer. All modes are asynchronous, and compartmentalized into functions.
+// Changes ----------
+// v1.1 added a new system to test for and reject pixels that are using an already selected location on the strip during the shimmer function to hopefully reduce flickering.
 
-#include <Adafruit_NeoPixel.h>
-#include <avr/power.h>
+
+//#include <Adafruit_NeoPixel.h>
+//#include <Encoder.h>
 
 // Which pin on the Arduino is connected to the NeoPixels?
-// On a Trinket or Gemma we suggest changing this to 1
 #define PIN            6
 
 // How many NeoPixels are attached to the Arduino?
@@ -18,14 +21,13 @@
 // When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
 // Note that for older NeoPixel strips you might need to change the third parameter--see the strandtest
 // example for more information on possible values.
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+//Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
-int potVal = 9;                                     // integer to store the value from the potentiometer
-int potPin = 2;                                     // integer to store the potentiometer pin
-int butpin = 3;                                     // integer to store button pin
+//Encoder myEnc(2, 3);                                // Encoder pins, these are hardware interrupt pins so you have to use the right one for your particular Arduino
+int butpin = 5;                                     // integer to store button pin
 int butval;                                         // Button digital read variable
-int butsel = 1;                                     // Button mode selection variable.
-int butbounce;
+int butsel = 0;                                     // Button mode selection variable.
+int butbounce;                                      // button debounce
 int rcount;                                         // Counter for red
 int gcount;                                         // Counter for green
 int bcount;                                         // Counter for blue
@@ -39,7 +41,7 @@ int magicnumber;                                    // magic number determines w
 
 
 //--------------------------------------------------// The following values are for the "Shimmer" routine
-int pixelvalue[7];                                  // array to store the address location of each pixel event, 8 in total
+byte pixelvalue[7];                                  // array to store the address location of each pixel event, 8 in total
 int countval[7];                                    // array to store the counter for each pixel event, 8 in total
 int pixelgo[7];                                     // array to store the activation bit for each pixel event, 8 in total
 int pixmax = 512;                                   // int to store the max brightness for each pixel event
@@ -50,37 +52,49 @@ int delayval;                                       // integer to hold delay val
 int randosparkle =0;                                // integer to hold the random number value
 int randosparklenum[] = {1,2,3,4,5,6,7,8};          // integer to hold the magic numbers governing which pixel fires next
 int maxbright;                                      // integer to determine max bright
+long oldPosition  = -999;
+
 
 void setup() {                                      //-----------------------------------------------(Setup)
     pinMode(butpin, INPUT);                         // Set buttonpin as input
     Serial.begin(9600);                             // Initialize Serial Debug
-    pixels.begin();                                 // This initializes the NeoPixel library.
+    //pixels.begin();                                 // This initializes the NeoPixel library.
 }
 
 void loop() {                                       //-----------------------------------------------(Main Loop)
-    pixels.setBrightness(255);
-    
-    butcheck();
-
-    if (butsel == 1){
-        clearscreen();
-        colourfade();
-    }
-
-if (butsel == 2){
-        clearscreen();
-        shimmer();
-    }
-    
-    Serial.println(butsel);
-    pixels.show();                                  // This sends the updated pixel color to the hardware.
-    delay(40);
   
+  butcheck();
+
+  if (butsel == 0){
+      clearscreen();
+      colourfade();
+  }
+  
+  if (butsel == 1){
+      clearscreen();
+      shimmer();
+  }
+  
+  Serial.println(butsel);
+  //pixels.show();                                  // This sends the updated pixel color to the hardware.
+     
+     
+ for (int i=0; i <= 7; i++){                      //For loop to check random number against magic number 
+        
+             Serial.print(" pixel ");
+             Serial.print(i);
+             Serial.print(" is");
+             Serial.println(pixelvalue[i]);    
+       
+ } 
+  
+
+
 }
 
 void clearscreen(){                                 //-----------------------------------------------(clears the strip)
     for(int i=0;i<NUMPIXELS;i++){
-        pixels.setPixelColor(i, pixels.Color(0,0,0));
+        //pixels.setPixelColor(i, pixels.Color(0,0,0));
     }  
 }
 
@@ -97,13 +111,24 @@ void butcheck(){                                    //--------------------------
      butbounce = 0; 
     }
 
-    if (butsel > 2){                               //  resets the button value variable. I use this method so I can add more modes if I want later.
-    butsel = 1;
+    if (butsel > 1){                               //  resets the button value variable. I use this method so I can add more modes if I want later.
+    butsel = 0;
     }
 }
 
 void colourfade(){                                  //-----------------------------------------------(Colour Fade Function)
-   
+
+    //long newPosition = myEnc.read();
+    //if (newPosition != oldPosition) {
+    //    oldPosition = newPosition;
+    //    Serial.println(newPosition);
+   // }
+    //if (newPosition > 255){
+    //  myEnc.write(1);
+    //}
+   // if (newPosition < 1){
+   //   myEnc.write(255);
+   // }
     
     magicnumber = random(0,30);                     //creates a magic number
 
@@ -178,12 +203,10 @@ void colourfade(){                                  //--------------------------
     }
     
     
-    potVal = analogRead(potPin);                    //determine delay
-    potVal = map(potVal, 0, 1024, 0, 500);
-    
+
     
     for(int i=LOWPIXELS;i<NUMPIXELS;i++){
-        pixels.setPixelColor(i, pixels.Color(rval,gval,bval));
+        //pixels.setPixelColor(i, pixels.Color(rval,gval,bval));
     }
 
   
@@ -192,6 +215,7 @@ void colourfade(){                                  //--------------------------
 void shimmer() {                                    //-----------------------------------------------(Shimmer Function)
 
     randosparkle = random(0,8);                      //creates a magic number
+    
     
                                                     
     for (int i=0; i <= 7; i++){                      //For loop to check random number against magic number 
@@ -205,116 +229,230 @@ void shimmer() {                                    //--------------------------
             drawPixelred(i);
         }
         if (pixelgo[i] == 1 && pixcoldic[i] >= 1 && pixcoldic[i] < 6){                       
-            drawPixelgreen(i);
+           // drawPixelgreen(i);
         }
           if (pixelgo[i] == 1 && pixcoldic[i] >= 6 && pixcoldic[i] < 9){                       
-            drawPixelblue(i);
+           // drawPixelblue(i);
         }
 }
-    pixels.show();                                  // This sends the updated pixel color to the hardware.
+    //pixels.show();                                  // This sends the updated pixel color to the hardware.
 }
 
 void drawPixelred(int pixelv){                      //-----------------------------------------------(Red Pixel Draw Function)
- 
- if(pixmat[pixelv]=0){
-  for (int i=0; i <= 5; i++){
-      if (pixelvalue[pixelv]!=pixelvalue[i] && pixelvalue[pixelv]<NUMPIXELS)
-        pixelvalue[pixelv]=pixelvalue[pixelv]+1;
-        pixmat[pixelv]=1;
+
+  if (countval[pixelv]==0){                                                           // If statement to test if this ID is stepping on anyone, first it checks if the fade has just started (to reduce flickering)
+
+    pixelvalue[pixelv] = random(LOWPIXELS,NUMPIXELS);                                 // Create new random pixel location
+    
+      if (pixelv==0){                                                                 // If the current pixel ID is 0 test every following ID location against randomly generated pixel location.
+        for (int i=1; i == 7; i++){          
+          if (pixelvalue[i]==pixelvalue[pixelv]){
+          pixmat[pixelv]=pixmat[pixelv]+1;
+          }
+        }
       }
- 
-    }
- 
-
-  if (countval[pixelv] < pixmax){                                   //check if counter is within envelope
-    if (countval[pixelv] < pixmax/2){                               //check if counter is within first half of fade
-      pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(countval[pixelv],0,0));
-    }
-
-    if (countval[pixelv] > pixmax/2){                               //check if counter is within second half of fade    
-      pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(-countval[pixelv],0,0));
-    }
-   countval[pixelv] = countval[pixelv] + 1;                         //increment counter
-   
-  }
-  else {                                                            //when finished fading 
-  pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,0,0));    //turn selected pixel off
-  pixelvalue[pixelv] = random(LOWPIXELS,NUMPIXELS);             //create new random pixel location
-  pixelgo[pixelv] = 0;                                              //deactivate pixel activate bit
-  countval[pixelv] = 0;                                             //reset counter
-  pixcoldic[pixelv] = random(0,9);
-  pixmat[pixelv]=0;
-}
   
- } 
- 
-void drawPixelgreen(int pixelv){                    //-----------------------------------------------(Green Pixel Draw Function 2)
+      if (pixelv==7){                                                                 // If the current pixel ID is 7 test every previous ID location.
+        for (int i=0; i < 7; i++){
+            if (pixelvalue[i]==pixelvalue[pixelv]){
+              pixmat[pixelv]=pixmat[pixelv]+1;
+            }
+          }
+        }
   
-   if(pixmat[pixelv]=0){                                //check for duplicates
-  for (int i=0; i <= 5; i++){
+  
+      if (pixelv > 0 && pixelv < 7){                                                  // For IDs somewhere in the middle, test every ID that isn't the current ID
+          
+        for (int i=0; i < pixelv; i++){ 
+          if (pixelvalue[i]==pixelvalue[pixelv]){
+            pixmat[pixelv]=pixmat[pixelv]+1;
+            }
+        }
+  
+        for (int i=pixelv+1; i == 7; i++){
+          if (pixelvalue[i]==pixelvalue[pixelv]){
+            pixmat[pixelv]=pixmat[pixelv]+1;
+            }
+        }
       
-    if (pixelvalue[pixelv]!=pixelvalue[i] && pixelvalue[pixelv]<NUMPIXELS)
-        pixelvalue[pixelv]=pixelvalue[pixelv]+1;
-        pixmat[pixelv]=1;
+      }
+
+    Serial.println(pixmat[pixelv]);
+   }
+
+  if (pixmat[pixelv] == 0){                                                           //check if match variable is zero, meaning no other pixel is using currently selected position. If it is the position will be discarded.
+
+    Serial.print(countval[pixelv]);
+    if (countval[pixelv] < pixmax){                                                   //check if counter is within envelope
+    
+      if (countval[pixelv] < pixmax/2){                                               //check if counter is within first half of fade
+        //pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(countval[pixelv],0,0));
+      }
+      
+      if (countval[pixelv] > pixmax/2){                                               // check if counter is within second half of fade    
+        //pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(-countval[pixelv],0,0));
+      }
+      
+      countval[pixelv] = countval[pixelv] + 1;                                        // Increment counter each pass through
+
     }
- 
+    else {                                                                            // when finished fading 
+      pixelvalue[pixelv] = random(LOWPIXELS,NUMPIXELS);                               //create new random pixel location
+      pixelgo[pixelv] = 0;                                                            //deactivate pixel activate bit
+      countval[pixelv] = 0;                                                           //reset counter
+      pixcoldic[pixelv] = random(0,9);
+      pixmat[pixelv]=0;
     }
     
-  
-
-  if (countval[pixelv] < pixmax){                                   //check if counter is within envelope
-    if (countval[pixelv] < pixmax/2){                               //check if counter is within first half of fade
-      pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,countval[pixelv],0));
-    }
-
-    if (countval[pixelv] > pixmax/2){                               //check if counter is within second half of fade    
-      pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,-countval[pixelv],0));
-    }
-   countval[pixelv] = countval[pixelv] + 1;                         //increment counter
-   
+   }
+  else{
+    
+    pixmat[pixelv]==0;                                                                // If the pixel is trying to use another pixels position reset pixmat in order to allow the whole thing to start over again next time through and hopefully find a number not in use?
+    
   }
-  else {                                                            //when finished fading 
-  pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,0,0));    //turn selected pixel off
-  pixelvalue[pixelv] = random(LOWPIXELS,NUMPIXELS);             //create new random pixel location
-  pixelgo[pixelv] = 0;                                              //deactivate pixel activate bit
-  countval[pixelv] = 0;                                             //reset counter
-  pixcoldic[pixelv] = random(0,9);
-  pixmat[pixelv]=0;
-}
+
+} 
+ 
+void drawPixelgreen(int pixelv){                    //-----------------------------------------------(Green Pixel Draw Function 2)
+  if (countval[pixelv]==0){                                                           // If statement to test if this ID is stepping on anyone, first it checks if the fade has just started (to reduce flickering)
+
+    pixelvalue[pixelv] = random(LOWPIXELS,NUMPIXELS);                                 // Create new random pixel location
+    
+      if (pixelv==0){                                                                 // If the current pixel ID is 0 test every following ID location against randomly generated pixel location.
+        for (int i=1; i = 7; i++){          
+          if (pixelvalue[i]==pixelvalue[pixelv]){
+          pixmat[pixelv]=pixmat[pixelv]+1;
+          }
+        }
+      }
   
+      if (pixelv==7){                                                                 // If the current pixel ID is 7 test every previous ID location.
+        for (int i=0; i < 7; i++){
+            if (pixelvalue[i]==pixelvalue[pixelv]){
+              pixmat[pixelv]=pixmat[pixelv]+1;
+            }
+          }
+        }
+  
+  
+      if (pixelv > 0 && pixelv < 7){                                                  // For IDs somewhere in the middle, test every ID that isn't the current ID
+          
+        for (int i=0; i < pixelv; i++){ 
+          if (pixelvalue[i]==pixelvalue[pixelv]){
+            pixmat[pixelv]=pixmat[pixelv]+1;
+            }
+        }
+  
+        for (int i=pixelv+1; i = 7; i++){
+          if (pixelvalue[i]==pixelvalue[pixelv]){
+            pixmat[pixelv]=pixmat[pixelv]+1;
+            }
+        }
+      
+      }
+  
+   }
+
+  if (pixmat[pixelv] == 0){                                                           //check if match variable is zero, meaning no other pixel is using currently selected position. If it is the position will be discarded.
+    
+    if (countval[pixelv] < pixmax){                                                   //check if counter is within envelope
+    
+      if (countval[pixelv] < pixmax/2){                                               //check if counter is within first half of fade
+        //pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,countval[pixelv],0));
+      }
+      
+      if (countval[pixelv] > pixmax/2){                                               // check if counter is within second half of fade    
+        //pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,-countval[pixelv],0));
+      }
+      
+      countval[pixelv] = countval[pixelv] + 1;                                        // Increment counter each pass through
+      
+    }
+    else {                                                                            // when finished fading 
+      pixelvalue[pixelv] = random(LOWPIXELS,NUMPIXELS);                               //create new random pixel location
+      pixelgo[pixelv] = 0;                                                            //deactivate pixel activate bit
+      countval[pixelv] = 0;                                                           //reset counter
+      pixcoldic[pixelv] = random(0,9);
+      pixmat[pixelv]=0;
+    }
+    
+   }
+  else{
+    
+    pixmat[pixelv]==0;                                                                // If the pixel is trying to use another pixels position reset pixmat in order to allow the whole thing to start over again next time through and hopefully find a number not in use?
+    
+  }
  } 
  
 void drawPixelblue(int pixelv){                     //-----------------------------------------------(Blue Pixel Draw Function 3)
- 
- if(pixmat[pixelv]=0){
-  for (int i=0; i <= 5; i++){
-      if (pixelvalue[pixelv]!=pixelvalue[i] && pixelvalue[pixelv]<NUMPIXELS)
-        pixelvalue[pixelv]=pixelvalue[pixelv]+1;
-        pixmat[pixelv]=1;
+ if (countval[pixelv]==0){                                                           // If statement to test if this ID is stepping on anyone, first it checks if the fade has just started (to reduce flickering)
+
+    pixelvalue[pixelv] = random(LOWPIXELS,NUMPIXELS);                                 // Create new random pixel location
+    
+      if (pixelv==0){                                                                 // If the current pixel ID is 0 test every following ID location against randomly generated pixel location.
+        for (int i=1; i = 7; i++){          
+          if (pixelvalue[i]==pixelvalue[pixelv]){
+          pixmat[pixelv]=pixmat[pixelv]+1;
+          }
+        }
       }
- 
-    }
- 
+  
+      if (pixelv==7){                                                                 // If the current pixel ID is 7 test every previous ID location.
+        for (int i=0; i < 7; i++){
+            if (pixelvalue[i]==pixelvalue[pixelv]){
+              pixmat[pixelv]=pixmat[pixelv]+1;
+            }
+          }
+        }
+  
+  
+      if (pixelv > 0 && pixelv < 7){                                                  // For IDs somewhere in the middle, test every ID that isn't the current ID
+          
+        for (int i=0; i < pixelv; i++){ 
+          if (pixelvalue[i]==pixelvalue[pixelv]){
+            pixmat[pixelv]=pixmat[pixelv]+1;
+            }
+        }
+  
+        for (int i=pixelv+1; i = 7; i++){
+          if (pixelvalue[i]==pixelvalue[pixelv]){
+            pixmat[pixelv]=pixmat[pixelv]+1;
+            }
+        }
+      
+      }
+  
+   }
 
-  if (countval[pixelv] < pixmax){                                   //check if counter is within envelope
-    if (countval[pixelv] < pixmax/2){                               //check if counter is within first half of fade
-      pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,0,countval[pixelv]));
+  if (pixmat[pixelv] == 0){                                                           //check if match variable is zero, meaning no other pixel is using currently selected position. If it is the position will be discarded.
+    
+    if (countval[pixelv] < pixmax){                                                   //check if counter is within envelope
+    
+      if (countval[pixelv] < pixmax/2){                                               //check if counter is within first half of fade
+        //pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,0,countval[pixelv]));
+      }
+      
+      if (countval[pixelv] > pixmax/2){                                               // check if counter is within second half of fade    
+        //pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,0,-countval[pixelv]));
+      }
+      
+      countval[pixelv] = countval[pixelv] + 1;                                        // Increment counter each pass through
+      
     }
-
-    if (countval[pixelv] > pixmax/2){                               //check if counter is within second half of fade    
-      pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,0,-countval[pixelv]));
+    else {                                                                            // when finished fading 
+      pixelvalue[pixelv] = random(LOWPIXELS,NUMPIXELS);                               //create new random pixel location
+      pixelgo[pixelv] = 0;                                                            //deactivate pixel activate bit
+      countval[pixelv] = 0;                                                           //reset counter
+      pixcoldic[pixelv] = random(0,9);
+      pixmat[pixelv]=0;
     }
-   countval[pixelv] = countval[pixelv] + 1;                         //increment counter
-   
+    
+   }
+  else{
+    
+    pixmat[pixelv]==0;                                                                // If the pixel is trying to use another pixels position reset pixmat in order to allow the whole thing to start over again next time through and hopefully find a number not in use?
+    
   }
-  else {                                                            //when finished fading 
-  pixels.setPixelColor(pixelvalue[pixelv], pixels.Color(0,0,0));    //turn selected pixel off
-  pixelvalue[pixelv] = random(LOWPIXELS,NUMPIXELS);             //create new random pixel location
-  pixelgo[pixelv] = 0;                                              //deactivate pixel activate bit
-  countval[pixelv] = 0;                                             //reset counter
-  pixcoldic[pixelv] = random(0,9);
-  pixmat[pixelv]=0;
-}
   
  } 
  
