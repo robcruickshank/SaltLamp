@@ -26,7 +26,7 @@
 //Encoder myEnc(2, 3);                                // Encoder pins, these are hardware interrupt pins so you have to use the right one for your particular Arduino
 int butpin = 5;                                     // integer to store button pin
 int butval;                                         // Button digital read variable
-int butsel = 0;                                     // Button mode selection variable.
+int butsel = 1;                                     // Button mode selection variable.
 int butbounce;                                      // button debounce
 int rcount;                                         // Counter for red
 int gcount;                                         // Counter for green
