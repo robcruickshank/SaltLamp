@@ -41,13 +41,13 @@ int magicnumber;                                    // magic number determines w
 
 
 //--------------------------------------------------// The following values are for the "Shimmer" routine
-int pixelvalue[7];                                  // array to store the address location of each pixel event, 8 in total
-int countval[7];                                    // array to store the counter for each pixel event, 8 in total
-int pixelgo[7];                                     // array to store the activation bit for each pixel event, 8 in total
+int pixelvalue[8];                                  // array to store the address location of each pixel event, 8 in total
+int countval[8];                                    // array to store the counter for each pixel event, 8 in total
+int pixelgo[8];                                     // array to store the activation bit for each pixel event, 8 in total
 int pixmax = 512;                                   // int to store the max brightness for each pixel event
-int pixelcol[7];                                    // array to store the colour decision
-int pixcoldic[7];                                   // array to store the colour decision bit
-int pixmat[7];                                      // array to indicate whether a pixel is stepping on another pixel
+int pixelcol[8];                                    // array to store the colour decision
+int pixcoldic[8];                                   // array to store the colour decision bit
+int pixmat[8];                                      // array to indicate whether a pixel is stepping on another pixel
 int delayval;                                       // integer to hold delay value
 int randosparkle =0;                                // integer to hold the random number value
 int randosparklenum[] = {1,2,3,4,5,6,7,8};          // integer to hold the magic numbers governing which pixel fires next
@@ -83,12 +83,12 @@ void loop() {                                       //--------------------------
         
              Serial.print(" pixel ");
              Serial.print(i);
-             Serial.print(" is");
+             Serial.print(" is  ");
              Serial.println(pixelvalue[i]);    
        
  } 
   
-
+Serial.println("********************************************************************************"")
 
 }
 
